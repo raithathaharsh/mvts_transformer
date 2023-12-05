@@ -13,6 +13,8 @@ from tqdm import tqdm
 from sktime.datasets import load_from_tsfile_to_dataframe
 
 from datasets import utils
+from scipy.io import arff
+from sklearn.preprocessing import LabelEncoder
 
 logger = logging.getLogger('__main__')
 
@@ -281,6 +283,13 @@ class TSRegressionArchive(BaseData):
 
     def load_single(self, filepath):
 
+        if filepath.count("TRAIN.ts"):
+
+          filepath = filepath.replace("/Crop_TRAIN.ts","")
+        
+        else:
+          filepath = filepath.replace("/Crop_TEST.ts","")
+
         # Every row of the returned df corresponds to a sample;
         # every column is a pd.Series indexed by timestamp and corresponds to a different dimension (feature)
         if self.config['task'] == 'regression':
@@ -311,49 +320,125 @@ class TSRegressionArchive(BaseData):
         elif self.config['task'] == 'classification':
 
             if filepath.count("TRAIN") == 1:
-              df, labels = load_from_tsfile_to_dataframe(filepath, return_separate_X_and_y=True, replace_missing_vals_with='NaN')
+              arff_file_path = filepath+'/InsectSound_TRAIN.arff'
+              data, meta = arff.loadarff(arff_file_path)
+
+              # Convert ARFF data to Pandas DataFrame
+              df = pd.DataFrame(data)
+
+              df_sound = pd.DataFrame({'dim_0': [0] * len(df)})
+
               # Select desired value
-              desired_length = 15000
+              for i in range(len(df)):
+                df_sound['dim_0'][i] = pd.Series(df.loc[i, 'att1':'att600'].astype(float).values)
+
+              label_encoder = LabelEncoder()
+
+              # Fit and transform the categorical column to labels
+              df['target'] = label_encoder.fit_transform(df['target'])
+
+
+              df = df_sound
+
+              labels = df['target'].to_numpy().astype(np.uint8) 
+
+
+              desired_length = 10000
               total_rows = len(df)
               selected_indices = random.sample(range(total_rows), desired_length)
               df = df.loc[selected_indices]
               labels = labels[selected_indices]
               df = df.reset_index(drop=True)
             else:
-              df, labels = load_from_tsfile_to_dataframe(filepath, return_separate_X_and_y=True, replace_missing_vals_with='NaN')
+              arff_file_path = filepath+'/InsectSound_TEST.arff'
+              data, meta = arff.loadarff(arff_file_path)
+
+              # Convert ARFF data to Pandas DataFrame
+              df = pd.DataFrame(data)
+
+              df_sound = pd.DataFrame({'dim_0': [0] * len(df)})
+
               # Select desired value
+              for i in range(len(df)):
+                df_sound['dim_0'][i] = pd.Series(df.loc[i, 'att1':'att600'].astype(float).values)
+
+              label_encoder = LabelEncoder()
+
+              # Fit and transform the categorical column to labels
+              df['target'] = label_encoder.fit_transform(df['target'])
+
+
+              df = df_sound
+
+              labels = df['target'].to_numpy().astype(np.uint8) 
+
+
               desired_length = 4000
               total_rows = len(df)
               selected_indices = random.sample(range(total_rows), desired_length)
               df = df.loc[selected_indices]
               labels = labels[selected_indices]
-              df = df.reset_index(drop=True)
-            
-            labels = pd.Series(labels, dtype="category")
-            self.class_names = labels.cat.categories
-            labels_df = pd.DataFrame(labels.cat.codes, dtype=np.int8)  # int8-32 gives an error when using nn.CrossEntropyLoss
+              df = df.reset_index(drop=True)        
         else:  # e.g. imputation
             try:
-                data = load_from_tsfile_to_dataframe(filepath, return_separate_X_and_y=True,
-                                                                     replace_missing_vals_with='NaN')
-                desired_length = 15000
-                total_rows = len(data[0])
-                selected_indices = random.sample(range(total_rows), desired_length)
-                data_1 = data[0].loc[selected_indices]
-                labs = data[1][selected_indices]
-                data_1 = data_1.reset_index(drop=True)
-                if isinstance(data, tuple):
-                    df, labels = data_1, labs
-                else:
-                    df = data_1
-            except:
-                df, _ = utils.load_from_tsfile_to_dataframe(filepath, return_separate_X_and_y=True,
-                                                                 replace_missing_vals_with='NaN')
-                desired_length = 15000
+                arff_file_path = filepath+'/InsectSound_TRAIN.arff'
+                data, meta = arff.loadarff(arff_file_path)
+
+                # Convert ARFF data to Pandas DataFrame
+                df = pd.DataFrame(data)
+
+                df_sound = pd.DataFrame({'dim_0': [0] * len(df)})
+
+                # Select desired value
+                for i in range(len(df)):
+                  df_sound['dim_0'][i] = pd.Series(df.loc[i, 'att1':'att600'].astype(float).values)
+
+                label_encoder = LabelEncoder()
+
+                # Fit and transform the categorical column to labels
+                df['target'] = label_encoder.fit_transform(df['target'])
+
+
+                df = df_sound
+
+                labels = df['target'].to_numpy().astype(np.uint8) 
+
+
+                desired_length = 10000
                 total_rows = len(df)
                 selected_indices = random.sample(range(total_rows), desired_length)
                 df = df.loc[selected_indices]
-                df.reset_index(drop=True)
+                labels = labels[selected_indices]
+                df = df.reset_index(drop=True)
+                if isinstance(data, tuple):
+                    df, labels = df, labels
+                else:
+                    df = df 
+            except:
+                arff_file_path = filepath+'/InsectSound_TRAIN.arff'
+                data, meta = arff.loadarff(arff_file_path)
+
+                # Convert ARFF data to Pandas DataFrame
+                df = pd.DataFrame(data)
+
+                df_sound = pd.DataFrame({'dim_0': [0] * len(df)})
+
+                # Select desired value
+                df_sound['dim_0'] = [pd.Series(row).astype(float) for row in df.loc[:, 'att1':'att600'].values]
+
+                label_encoder = LabelEncoder()
+                # Fit and transform the categorical column to labels
+                df['target'] = label_encoder.fit_transform(df['target'])
+                labels = df['target'].to_numpy().astype(np.uint8)
+                df = df_sound 
+
+
+                desired_length = 10000
+                total_rows = len(df)
+                selected_indices = random.sample(range(total_rows), desired_length)
+                df = df.loc[selected_indices]
+                labels = labels[selected_indices]
+                df = df.reset_index(drop=True)
 
             labels_df = None
 
