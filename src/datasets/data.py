@@ -5,6 +5,7 @@ import glob
 import re
 import logging
 from itertools import repeat, chain
+import random
 
 import numpy as np
 import pandas as pd
@@ -283,10 +284,51 @@ class TSRegressionArchive(BaseData):
         # Every row of the returned df corresponds to a sample;
         # every column is a pd.Series indexed by timestamp and corresponds to a different dimension (feature)
         if self.config['task'] == 'regression':
-            df, labels = load_from_tsfile_to_dataframe(filepath, return_separate_X_and_y=True, replace_missing_vals_with='NaN')
-            labels_df = pd.DataFrame(labels, dtype=np.float32)
+
+            if filepath.count("TRAIN") == 1:
+              df, labels = load_from_tsfile_to_dataframe(filepath, return_separate_X_and_y=True, replace_missing_vals_with='NaN')
+              # Select desired value
+              desired_length = 15000
+              total_rows = len(df)
+              selected_indices = random.sample(range(total_rows), desired_length)
+              df = df.loc[selected_indices]
+              labels = labels[selected_indices]
+              df = df.reset_index(drop=True)
+
+              labels_df = pd.DataFrame(labels, dtype=np.float32)
+            else:
+              df, labels = load_from_tsfile_to_dataframe(filepath, return_separate_X_and_y=True, replace_missing_vals_with='NaN')
+              # Select desired value
+              desired_length = 4000
+              total_rows = len(df)
+              selected_indices = random.sample(range(total_rows), desired_length)
+              df = df.loc[selected_indices]
+              labels = labels[selected_indices]
+              df = df.reset_index(drop=True)
+              labels_df = pd.DataFrame(labels, dtype=np.float32)
+
+
         elif self.config['task'] == 'classification':
-            df, labels = load_from_tsfile_to_dataframe(filepath, return_separate_X_and_y=True, replace_missing_vals_with='NaN')
+
+            if filepath.count("TRAIN") == 1:
+              df, labels = load_from_tsfile_to_dataframe(filepath, return_separate_X_and_y=True, replace_missing_vals_with='NaN')
+              # Select desired value
+              desired_length = 15000
+              total_rows = len(df)
+              selected_indices = random.sample(range(total_rows), desired_length)
+              df = df.loc[selected_indices]
+              labels = labels[selected_indices]
+              df = df.reset_index(drop=True)
+            else:
+              df, labels = load_from_tsfile_to_dataframe(filepath, return_separate_X_and_y=True, replace_missing_vals_with='NaN')
+              # Select desired value
+              desired_length = 4000
+              total_rows = len(df)
+              selected_indices = random.sample(range(total_rows), desired_length)
+              df = df.loc[selected_indices]
+              labels = labels[selected_indices]
+              df = df.reset_index(drop=True)
+            
             labels = pd.Series(labels, dtype="category")
             self.class_names = labels.cat.categories
             labels_df = pd.DataFrame(labels.cat.codes, dtype=np.int8)  # int8-32 gives an error when using nn.CrossEntropyLoss
@@ -294,13 +336,25 @@ class TSRegressionArchive(BaseData):
             try:
                 data = load_from_tsfile_to_dataframe(filepath, return_separate_X_and_y=True,
                                                                      replace_missing_vals_with='NaN')
+                desired_length = 15000
+                total_rows = len(data[0])
+                selected_indices = random.sample(range(total_rows), desired_length)
+                data_1 = data[0].loc[selected_indices]
+                labs = data[1][selected_indices]
+                data_1 = data_1.reset_index(drop=True)
                 if isinstance(data, tuple):
-                    df, labels = data
+                    df, labels = data_1, labs
                 else:
-                    df = data
+                    df = data_1
             except:
                 df, _ = utils.load_from_tsfile_to_dataframe(filepath, return_separate_X_and_y=True,
                                                                  replace_missing_vals_with='NaN')
+                desired_length = 15000
+                total_rows = len(df)
+                selected_indices = random.sample(range(total_rows), desired_length)
+                df = df.loc[selected_indices]
+                df.reset_index(drop=True)
+
             labels_df = None
 
         lengths = df.applymap(lambda x: len(x)).values  # (num_samples, num_dimensions) array containing the length of each series
@@ -325,6 +379,7 @@ class TSRegressionArchive(BaseData):
         # First create a (seq_len, feat_dim) dataframe for each sample, indexed by a single integer ("ID" of the sample)
         # Then concatenate into a (num_samples * seq_len, feat_dim) dataframe, with multiple rows corresponding to the
         # sample index (i.e. the same scheme as all datasets in this project)
+
         df = pd.concat((pd.DataFrame({col: df.loc[row, col] for col in df.columns}).reset_index(drop=True).set_index(
             pd.Series(lengths[row, 0]*[row])) for row in range(df.shape[0])), axis=0)
 
