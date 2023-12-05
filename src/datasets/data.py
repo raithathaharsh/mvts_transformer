@@ -329,8 +329,7 @@ class TSRegressionArchive(BaseData):
               df_sound = pd.DataFrame({'dim_0': [0] * len(df)})
 
               # Select desired value
-              for i in range(len(df)):
-                df_sound['dim_0'][i] = pd.Series(df.loc[i, 'att1':'att600'].astype(float).values)
+              df_sound['dim_0'] = [pd.Series(row).astype(float) for row in df.loc[:, 'att1':'att600'].values]
 
               label_encoder = LabelEncoder()
 
@@ -359,8 +358,7 @@ class TSRegressionArchive(BaseData):
               df_sound = pd.DataFrame({'dim_0': [0] * len(df)})
 
               # Select desired value
-              for i in range(len(df)):
-                df_sound['dim_0'][i] = pd.Series(df.loc[i, 'att1':'att600'].astype(float).values)
+              df_sound['dim_0'] = [pd.Series(row).astype(float) for row in df.loc[:, 'att1':'att600'].values]
 
               label_encoder = LabelEncoder()
 
@@ -390,8 +388,7 @@ class TSRegressionArchive(BaseData):
                 df_sound = pd.DataFrame({'dim_0': [0] * len(df)})
 
                 # Select desired value
-                for i in range(len(df)):
-                  df_sound['dim_0'][i] = pd.Series(df.loc[i, 'att1':'att600'].astype(float).values)
+                df_sound['dim_0'] = [pd.Series(row).astype(float) for row in df.loc[:, 'att1':'att600'].values]
 
                 label_encoder = LabelEncoder()
 
